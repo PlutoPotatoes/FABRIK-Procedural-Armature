@@ -120,7 +120,7 @@ public class Fabrik : MonoBehaviour
             //shift the position of the joint ahead back by move dir to get the next segment's position
             moveDir = curr - moveDir;
 
-            moveDir = ConstrainRotation(curr, moveDir).normalized*segmentLen + curr;
+            //moveDir = ConstrainRotation(curr, moveDir).normalized*segmentLen + curr;
 
 
             segments[i + 1].transform.position = moveDir;

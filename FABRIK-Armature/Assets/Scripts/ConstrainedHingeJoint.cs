@@ -51,10 +51,7 @@ public class ConstrainedHingeJoint : FABRIKJoint
         float upperLegAngle = -Vector3.SignedAngle(Vector3.down, parentJoint.transform.forward, parentJoint.transform.right);
         MaxAngle = (270 + upperLegAngle);
         MinAngle = Mathf.Max(90, 90 + upperLegAngle);
-        if (offset == 1)
-        {
-            //print(theta * Mathf.Rad2Deg);
-        }
+
         //create our new position incase we don't need constraints
         Vector3 newPos = new Vector3(0, OProj.y, OProj.z);
         //if theta is large enough to be constrained, or small enough to ignore the mininum use max

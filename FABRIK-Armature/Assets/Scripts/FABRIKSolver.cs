@@ -10,7 +10,8 @@ public class FABRIKSolver : MonoBehaviour
     {
         Constant,
         Delay_Frames,
-        Reset_on_Delay
+        Reset_on_Delay,
+        Frame_Skip
 
     }
 
@@ -38,6 +39,7 @@ public class FABRIKSolver : MonoBehaviour
     [SerializeField] int maxIterations;
     [SerializeField] Vector3 legOffset;
     [SerializeField] string datafile;
+    [SerializeField] Animator ArmatureAnimator;
 
 
 
@@ -58,13 +60,14 @@ public class FABRIKSolver : MonoBehaviour
     private string datapath;
     private int frame = 0;
     private int DelayFrame = 0;
+    private float animatorProgress = 0f;
 
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        datapath = "C:/Game Making/IK-Research/test_data/" + datafile + ".csv";
+        datapath = "C:/Game Making/FABRIK-Project-Final/FABRIK-Procedural-Armature/FABRIK-Armature/Test-Data/" + datafile + ".csv";
         createCSV(datapath);
         ArmLeftResetPosition = new Vector3[ArmLeft.Length];
         ArmRightResetPosition = new Vector3[ArmRight.Length];
@@ -81,6 +84,8 @@ public class FABRIKSolver : MonoBehaviour
         NeckResetRotation = new Quaternion[Neck.Length];
         get_reset_transforms();
         reset_model();
+        ArmatureAnimator.speed = 1f;
+
 
     }
 
@@ -90,6 +95,16 @@ public class FABRIKSolver : MonoBehaviour
         transform.position = Roots[0].transform.position;
         solve();
         //gatherData(datapath);
+    }
+
+    private void setArmatureFrame()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            animatorProgress = (animatorProgress + 0.05f) % 1;
+            ArmatureAnimator.Play("Movement_test_1", 0, animatorProgress);
+        }
+        
     }
 
     private void solve()
@@ -117,12 +132,19 @@ public class FABRIKSolver : MonoBehaviour
                 solveBody();
                 DelayFrame++;
                 break;
+            case solvePattern.Frame_Skip:
+                ArmatureAnimator.speed = 0.0f;
+                setArmatureFrame();
+                solveBody();
+                break;
+
 
         }
     }
 
     void solveBody()
     {
+        //FABRIK(Spine, Roots[0].transform.position, targets[4].transform.position, ResetTargets[6], ResetTargets[4]);
         FABRIK(ArmLeft, Roots[1].transform.position , targets[0].transform.position, ResetTargets[4], ResetTargets[0]);
         FABRIK(ArmRight, Roots[1].transform.position , targets[1].transform.position, ResetTargets[4], ResetTargets[1]);
         FABRIK(LegLeft, Roots[0].transform.position-legOffset, targets[2].transform.position, ResetTargets[6], ResetTargets[2]);
@@ -285,7 +307,14 @@ public class FABRIKSolver : MonoBehaviour
             }
             else
             {
-                limb[i].transform.rotation = Quaternion.LookRotation(faceDir);
+                if (joint.isSubBase)
+                {
+                    limb[i].transform.rotation = Quaternion.LookRotation(transform.forward, transform.up);
+                }
+                else
+                {
+                    limb[i].transform.rotation = Quaternion.LookRotation(faceDir, limb[i].transform.up);
+                }
             }
 
 
@@ -308,26 +337,31 @@ public class FABRIKSolver : MonoBehaviour
     {
         //vector3 distance(joint, target) - end effector joint length
         //track arms targets 0 and 1
-        float LeftArmDistance = Vector3.Distance(ArmLeft[2].transform.position, targets[0].transform.position) - 1;
-        float RightArmDistance = Vector3.Distance(ArmRight[2].transform.position, targets[1].transform.position) - 1;
+        float LeftArmDistance = Vector3.Distance(ArmLeft[2].transform.position, targets[0].transform.position);
+        float RightArmDistance = Vector3.Distance(ArmRight[2].transform.position, targets[1].transform.position);
         //track legs targets 2 and 3
-        float LeftLegDistance = Vector3.Distance(LegLeft[2].transform.position, targets[2].transform.position) - 1;
-        float RightLegDistance = Vector3.Distance(LegRight[2].transform.position, targets[3].transform.position) - 1;
+        float LeftLegDistance = Vector3.Distance(LegLeft[2].transform.position, targets[2].transform.position);
+        float RightLegDistance = Vector3.Distance(LegRight[2].transform.position, targets[3].transform.position);
         //track shoulders target 4
-        float ShouldersDistance = Vector3.Distance(Spine[3].transform.position, targets[4].transform.position) - 1;
+        float ShouldersDistance = Vector3.Distance(Spine[3].transform.position, targets[4].transform.position);
         //track head target 5
-        float HeadDistance = Vector3.Distance(Neck[2].transform.position, targets[4].transform.position) - 1;
-        float LeftElbowDistance = Vector3.Distance(ArmLeft[1].transform.position, ArmatureTrackPoints[2].transform.position);
-        float RightElbowDistance = Vector3.Distance(ArmRight[1].transform.position, ArmatureTrackPoints[3].transform.position);
+        float HeadDistance = Vector3.Distance(Neck[2].transform.position, targets[4].transform.position);
 
-        float LeftKneeDistance = Vector3.Distance(LegLeft[1].transform.position, ArmatureTrackPoints[0].transform.position);
-        float RightKneeDistance = Vector3.Distance(LegRight[1].transform.position, ArmatureTrackPoints[1].transform.position);
+        //intermediate joints adjust for mimic offset
+        float LeftElbowDistance = Vector3.Distance(ArmLeft[1].transform.position, ArmatureTrackPoints[2].transform.position) - 15;
+        float RightElbowDistance = Vector3.Distance(ArmRight[1].transform.position, ArmatureTrackPoints[3].transform.position) - 15;
 
-        //format and store in csv?
+        float LeftKneeDistance = Vector3.Distance(LegLeft[1].transform.position, ArmatureTrackPoints[0].transform.position)-15;
+        float RightKneeDistance = Vector3.Distance(LegRight[1].transform.position, ArmatureTrackPoints[1].transform.position)-15;
+
+        //format and store in csv
 
         string data = "\n" + frame + "," + LeftArmDistance + "," + RightArmDistance + "," + LeftLegDistance + "," + RightLegDistance + "," + ShouldersDistance + "," + HeadDistance + "," + LeftElbowDistance + "," + RightElbowDistance + "," + LeftKneeDistance + "," + RightKneeDistance;
         File.AppendAllText(filename, data);
+        print(frame);
+        print(data);
         frame++;
     }
 
+    
 }
